@@ -1,0 +1,448 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1f2937;
+    --border: #30363d;
+    --accent: #3b82f6;
+    --accent-h: #2563eb;
+    --green: #22c55e;
+    --red: #ef4444;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --radius: 14px;
+    --card-p: 20px;
+}
+
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 16px 12px 48px;
+    min-height: 100vh;
+    /* prevent zoom on input focus on iOS */
+    -webkit-text-size-adjust: 100%;
+}
+
+/* -------- LAYOUT -------- */
+.container {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* -------- HEADER -------- */
+.app-header {
+    text-align: center;
+    padding: 12px 0 4px;
+}
+
+.app-header h1 {
+    font-size: clamp(1.6rem, 6vw, 2rem);
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.subtitle {
+    color: var(--muted);
+    margin: 4px 0 0;
+    font-size: clamp(0.8rem, 3.5vw, 0.9rem);
+}
+
+/* -------- CARD -------- */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--card-p);
+}
+
+.card h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 12px;
+    color: var(--text);
+}
+
+/* -------- ROW -------- */
+.row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* -------- INPUTS -------- */
+input[type="text"],
+input:not([type]),
+select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 1rem;
+    /* 1rem prevents zoom on iOS (<16px zooms) */
+    flex: 1;
+    min-width: 0;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+input:focus,
+select:focus {
+    border-color: var(--accent);
+}
+
+/* select arrow */
+select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 34px;
+}
+
+/* -------- BUTTONS -------- */
+button {
+    background: var(--accent);
+    border: none;
+    padding: 10px 18px;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background 0.2s, transform 0.1s;
+    /* better tap targets on mobile */
+    min-height: 44px;
+    touch-action: manipulation;
+}
+
+button:hover {
+    background: var(--accent-h);
+}
+
+button:active {
+    transform: scale(0.97);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.btn-secondary {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+.btn-secondary:hover {
+    background: #374151;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 4px 8px;
+    font-size: 1rem;
+    min-height: 36px;
+}
+
+.btn-icon:hover {
+    color: var(--red);
+    background: transparent;
+}
+
+.btn-download {
+    display: inline-flex;
+    align-items: center;
+    background: var(--green);
+    color: #fff;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    min-height: 44px;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+}
+
+.btn-download:hover {
+    opacity: 0.85;
+}
+
+/* -------- STATUS -------- */
+.status-line {
+    margin: 10px 0 0;
+    font-size: 0.88rem;
+    color: var(--muted);
+}
+
+/* -------- CONNECT ROW — stack on small screens -------- */
+#connectCard .row {
+    gap: 8px;
+}
+
+@media (max-width: 480px) {
+    #connectCard .row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #connectCard .row button,
+    #connectCard .row input {
+        width: 100%;
+    }
+}
+
+/* -------- DEVICES LIST -------- */
+#devicesList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.device-item {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.device-id {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-family: monospace;
+}
+
+.empty-hint {
+    color: var(--muted);
+    font-size: 0.88rem;
+    padding: 4px;
+}
+
+/* -------- DROP ZONE -------- */
+.drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.95rem;
+    transition: border-color 0.2s, background 0.2s;
+    margin: 12px 0 8px;
+    user-select: none;
+    /* make sure it's tappable on mobile */
+    -webkit-tap-highlight-color: transparent;
+}
+
+.drop-zone:hover,
+.drop-zone:active,
+.drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(59, 130, 246, 0.07);
+    color: var(--text);
+}
+
+/* -------- RECIPIENT ROW -------- */
+.recipient-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.recipient-row label {
+    font-size: 0.88rem;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.recipient-row select {
+    flex: 1;
+    min-width: 120px;
+}
+
+/* -------- SELECTED FILE -------- */
+.selected-file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    margin-bottom: 4px;
+}
+
+.file-name {
+    font-weight: 500;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-size {
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+/* -------- PROGRESS -------- */
+.progress-bar-bg {
+    background: var(--surface2);
+    border-radius: 99px;
+    height: 8px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #a78bfa);
+    border-radius: 99px;
+    transition: width 0.3s ease;
+}
+
+#progressWrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 0;
+}
+
+#progressText {
+    font-size: 0.85rem;
+    color: var(--muted);
+    min-width: 36px;
+    text-align: right;
+}
+
+/* -------- SEND BUTTON — full width on mobile -------- */
+@media (max-width: 480px) {
+    #sendBtn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* -------- INCOMING FILES -------- */
+.incoming-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    animation: slideIn 0.25s ease;
+    flex-wrap: wrap;
+}
+
+.file-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* -------- CHAT ROW -------- */
+@media (max-width: 480px) {
+    .card .row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .card .row input,
+    .card .row button {
+        width: 100%;
+    }
+}
+
+/* -------- ERROR BANNER -------- */
+.error-banner {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.88rem;
+    color: #fca5a5;
+    margin-top: 10px;
+    display: none;
+}
+
+/* -------- LOG -------- */
+#log {
+    max-height: 200px;
+    overflow-y: auto;
+    background: #020617;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.log-entry {
+    color: var(--text);
+}
+
+.log-ts {
+    color: var(--muted);
+    margin-right: 6px;
+    font-family: monospace;
+}
+
+/* -------- SCROLLBAR -------- */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 99px;
+}

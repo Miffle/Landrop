@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Landrop</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <header class="app-header">
+            <h1>⚡ Landrop</h1>
+            <p class="subtitle">Быстрый обмен файлами в локальной сети</p>
+        </header>
+
+        <!-- CONNECT CARD -->
+        <div class="card" id="connectCard">
+            <h2>Подключение</h2>
+            <div class="row">
+                <input id="deviceName" placeholder="Имя устройства" autocomplete="off" />
+                <button onclick="generateName()" class="btn-secondary">Случайное</button>
+                <button onclick="connectToWebsocket()" id="connectBtn">Подключиться</button>
+            </div>
+            <p class="status-line">Статус: <b id="myName">не подключён</b></p>
+            <div id="wsError" class="error-banner"></div>
+        </div>
+
+        <!-- DEVICES CARD -->
+        <div class="card">
+            <h2>Устройства в сети</h2>
+            <ul id="devicesList">
+                <li class="empty-hint">Нет устройств</li>
+            </ul>
+        </div>
+
+        <!-- SEND FILE CARD -->
+        <div class="card">
+            <h2>Отправить файл</h2>
+
+            <div class="recipient-row">
+                <label>Кому:</label>
+                <select id="recipient"></select>
+            </div>
+
+            <!-- DROP ZONE -->
+            <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
+                <span id="dropZoneText">📂 Перетащите файл сюда или нажмите для выбора</span>
+                <input type="file" id="fileInput" style="display:none" onchange="onFileSelected(this)" />
+            </div>
+
+            <div id="selectedFile" class="selected-file" style="display:none">
+                <span id="selectedFileName"></span>
+                <span id="selectedFileSize" class="file-size"></span>
+                <button class="btn-icon" onclick="clearFile()" title="Убрать файл">✕</button>
+            </div>
+
+            <!-- PROGRESS -->
+            <div id="progressWrap" style="display:none">
+                <div class="progress-bar-bg">
+                    <div id="progressBar" class="progress-bar" style="width:0%"></div>
+                </div>
+                <span id="progressText">0%</span>
+            </div>
+
+            <div class="row" style="margin-top:12px">
+                <button onclick="sendFile()" id="sendBtn">Отправить</button>
+            </div>
+        </div>
+
+        <!-- INCOMING FILES -->
+        <div class="card" id="incomingCard" style="display:none">
+            <h2>📥 Полученные файлы</h2>
+            <div id="incomingList"></div>
+        </div>
+
+        <!-- CHAT CARD -->
+        <div class="card">
+            <h2>Сообщение</h2>
+            <div class="row">
+                <input id="message" placeholder="Введите текст..." autocomplete="off"
+                    onkeydown="if(event.key==='Enter') sendDirectMessageFromUI()" />
+                <button onclick="sendDirectMessageFromUI()">Отправить</button>
+            </div>
+        </div>
+
+        <!-- LOG CARD -->
+        <div class="card">
+            <h2>Лог</h2>
+            <div id="log"></div>
+        </div>
+
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
