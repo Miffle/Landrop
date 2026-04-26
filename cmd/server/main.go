@@ -1,8 +1,9 @@
 package main
 
 import (
-	"Test/internal/presence"
-	"Test/internal/server"
+	webfiles "Landrop"
+	"Landrop/internal/presence"
+	"Landrop/internal/server"
 	"log"
 	"net/http"
 )
@@ -16,11 +17,13 @@ func main() {
 
 	http.HandleFunc("/ws", server.HandleWS(hub))
 
-	fs := http.FileServer(http.Dir("./web/static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	// Serve embedded static files
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(webfiles.Static()))))
 
+	// Serve embedded index.html
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./web/templates/index.html")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(webfiles.IndexHTML())
 	})
 
 	log.Printf("Landrop %s — listening on :6437", Version)
