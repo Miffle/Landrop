@@ -7,6 +7,9 @@ import (
 	"net/http"
 )
 
+// Version is set at build time via: -ldflags "-X main.Version=v1.2.3"
+var Version = "dev"
+
 func main() {
 	hub := presence.NewHub()
 	go hub.Run()
@@ -20,6 +23,6 @@ func main() {
 		http.ServeFile(w, r, "./web/templates/index.html")
 	})
 
-	log.Println("Server on :6437")
+	log.Printf("Landrop %s — listening on :6437", Version)
 	log.Fatal(http.ListenAndServe(":6437", nil))
 }
