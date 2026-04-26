@@ -99,6 +99,8 @@ function handleMessage(data) {
     }
 }
 
+let fileFrom;
+
 function onFileStart(p) {
     fileBuffers[p.fileId] = {
         name: p.name,
@@ -107,6 +109,7 @@ function onFileStart(p) {
         chunkCount: 0,
         chunks: []
     };
+    fileFrom = p.from
     addLog(`[RX] file_start: "${p.name}" (${formatSize(p.size)}) from=${p.from ? p.from.slice(0, 8) : '?'}`);
     console.log('[landrop] file_start', p);
 }
@@ -133,7 +136,7 @@ function onBinaryChunk(buffer) {
         addLog(`[RX] chunk #${buf.chunkCount} | ${formatSize(buf.received)} / ${formatSize(buf.size)} (${pct}%)`);
     }
 
-    sendAck(buf.from, fileId);
+    sendAck(fileFrom, fileId);
 }
 
 function onFileEnd(p) {
