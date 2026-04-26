@@ -82,10 +82,13 @@ setup_systemd() {
     return
   fi
 
-  printf '\033[1;34m[landrop]\033[0m Install as systemd service? [y/N] '
+  printf '\033[1;34m[landrop]\033[0m Install as systemd service? [Y/n] '
   read -r REPLY
   case "$REPLY" in
-    [Yy]*)
+   [Nn]*)
+        info "Skipped systemd setup."
+        ;;
+   *)
       SERVICE_FILE="/etc/systemd/system/landrop.service"
       info "Writing $SERVICE_FILE (requires sudo)..."
       sudo tee "$SERVICE_FILE" >/dev/null <<EOF
@@ -105,9 +108,6 @@ EOF
       sudo systemctl daemon-reload
       sudo systemctl enable --now landrop
       ok "Service enabled and started."
-      ;;
-    *)
-      info "Skipped systemd setup."
       ;;
   esac
 }

@@ -15,62 +15,33 @@
 
 ### Локально
 
-```bash
-git clone https://github.com/Miffle/Landrop.git
-cd landrop
-go run ./cmd/server
-```
+1) Заходим в релизы и скачиваем последнюю версию
+2) Запускаем
 
 Сервер поднимается на порту `6437` (Можно поменять). Открыть в браузере: `http://localhost:6437`
 
 ### На удалённом устройстве (например, Orange Pi)
 
-Сборка под Linux ARM64 на Windows:
-
-```cmd
-set GOOS=linux
-set GOARCH=arm64
-go build -o landrop ./cmd/server
+Достаточно будет выполнить команду:
+```shell
+sh <(wget -O - https://raw.githubusercontent.com/Miffle/Landrop/main/install.sh)
 ```
-
-Для 32-битных ARM:
-
-```cmd
-set GOOS=linux
-set GOARCH=arm
-set GOARM=7
-go build -o landrop ./cmd/server
+Или
+```shell
+wget -O /tmp/install.sh https://raw.githubusercontent.com/Miffle/Landrop/main/install.sh && sh /tmp/install.sh
 ```
-
-### Копирование на устройство:
-Если вы вдруг не делали возможность простого подключения к orangepi (например ssh orangepi), то вместо orangepi:/ - \<user\>@\<ip\>:/
-```bash
-scp landrop orangepi:/home/orangepi/landrop
-scp -r web orangepi:/home/orangepi/landrop
-```
-Структура, после выполнения команд должна быть такой:
-```cmd
-landrop.bin  web
-
-./web:
-static  templates
-
-./web/static:
-app.js  style.css
-
-./web/templates:
-index.html
-```
+> [!IMPORTANT]
+> В пункте "[landrop] Install as systemd service? [Y/n]" советую выбрать Y 
+> 
 ### Запуск:
-
+1) Переходим в каталог landrop 
 ```bash
-ssh orangepi
-cd /home/orangepi/landrop
-chmod +x landrop.bin
+cd landrop
+```
+2) Запускаем файл
+```shell
 ./landrop
 ```
-
-Бинарник должен запускаться из директории, где лежит папка `web/`.
 
 ### Автозапуск через systemd
 
@@ -82,7 +53,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/home/orangepi/landrop
-ExecStart=/home/orangepi/landrop/landrop.bin
+ExecStart=/home/orangepi/landrop/landrop
 Restart=on-failure
 User=orangepi
 ```
