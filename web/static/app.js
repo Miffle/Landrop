@@ -1,20 +1,18 @@
 console.log("Landrop frontend loaded");
 
-// -------------------------
-// STATE
-// -------------------------
 let ws = null;
 let myId = null;
 let devices = [];
-let fileBuffers = {};   // incoming file state: { [fileId]: { name, size, received, chunks[] } }
+let fileBuffers = {};
+let ackWindowCount = 0;
+let ackWindowWaiters = [];
 let selectedFile = null;
 let isSending = false;
 
-const CHUNK_SIZE = 64 * 1024; // 64 KiB — fast on LAN, low server memory
+const CHUNK_SIZE = 256 * 1024;
+const SEND_WINDOW = 8;
+const HDR_SIZE = 72;
 
-// -------------------------
-// CONNECT
-// -------------------------
 function connectToWebsocket() {
     const name = document.getElementById("deviceName").value.trim() || "Anonymous";
     myId = getClientId();
@@ -35,13 +33,21 @@ function connectToWebsocket() {
 
         ws.send(JSON.stringify({
             type: "register",
-            payload: { id: myId, name }
+            payload: {id: myId, name}
         }));
 
         addLog("🟢 Подключено как «" + name + "»");
     };
 
-    ws.onmessage = (evt) => handleMessage(JSON.parse(evt.data));
+    ws.binaryType = "arraybuffer";
+
+    ws.onmessage = (evt) => {
+        if (evt.data instanceof ArrayBuffer) {
+            onBinaryChunk(evt.data);
+            return;
+        }
+        handleMessage(JSON.parse(evt.data));
+    };
 
     ws.onclose = (evt) => {
         const reason = evt.reason ? ` (${evt.reason})` : "";
@@ -59,9 +65,6 @@ function connectToWebsocket() {
     };
 }
 
-// -------------------------
-// MESSAGE ROUTER
-// -------------------------
 function handleMessage(data) {
     switch (data.type) {
 
@@ -86,43 +89,85 @@ function handleMessage(data) {
         case "direct_message":
             addLog("📩 От " + (data.payload.from || "?") + ": " + data.payload.text);
             break;
+
+        case "file_ack":
+            ackWindowCount = Math.max(0, ackWindowCount - 1);
+            if (ackWindowWaiters.length > 0) {
+                ackWindowWaiters.shift()();
+            }
+            break;
     }
 }
 
-// -------------------------
-// INCOMING FILE HANDLING
-// -------------------------
 function onFileStart(p) {
     fileBuffers[p.fileId] = {
         name: p.name,
         size: p.size,
         received: 0,
+        chunkCount: 0,
         chunks: []
     };
-    addLog("📨 Входящий файл: «" + p.name + "» (" + formatSize(p.size) + ")");
+    addLog(`[RX] file_start: "${p.name}" (${formatSize(p.size)}) from=${p.from ? p.from.slice(0, 8) : '?'}`);
+    console.log('[landrop] file_start', p);
 }
 
-function onFileChunk(p) {
-    const buf = fileBuffers[p.fileId];
-    if (!buf) return;
+function onBinaryChunk(buffer) {
+    const view = new Uint8Array(buffer);
 
-    // decode base64 → Uint8Array
-    const binary = atob(p.data);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    let fileId = "";
+    for (let i = 36; i < HDR_SIZE; i++) fileId += String.fromCharCode(view[i]);
 
-    buf.chunks.push(bytes);
-    buf.received += bytes.length;
+    const buf = fileBuffers[fileId];
+    if (!buf) {
+        console.warn('[landrop] binary chunk for unknown fileId', fileId);
+        return;
+    }
+
+    const chunk = buffer.slice(HDR_SIZE);
+    buf.chunks.push(chunk);
+    buf.received += chunk.byteLength;
+    buf.chunkCount++;
+
+    if (buf.chunkCount % 16 === 0 || buf.received >= buf.size) {
+        const pct = buf.size > 0 ? Math.round(buf.received / buf.size * 100) : 0;
+        addLog(`[RX] chunk #${buf.chunkCount} | ${formatSize(buf.received)} / ${formatSize(buf.size)} (${pct}%)`);
+    }
+
+    sendAck(buf.from, fileId);
 }
 
 function onFileEnd(p) {
     const buf = fileBuffers[p.fileId];
-    if (!buf) return;
+    if (!buf) {
+        addLog(`[RX] ERROR: file_end for unknown fileId ${p.fileId.slice(0, 8)}`);
+        return;
+    }
+
+    addLog(`[RX] file_end: assembling blob | chunks=${buf.chunkCount} received=${formatSize(buf.received)} expected=${formatSize(buf.size)}`);
+    console.log('[landrop] file_end, assembling blob', {
+        chunks: buf.chunkCount,
+        received: buf.received,
+        expected: buf.size
+    });
+
+    if (buf.received === 0) {
+        addLog(`[RX] ERROR: 0 bytes received for "${buf.name}", aborting`);
+        delete fileBuffers[p.fileId];
+        return;
+    }
 
     const blob = new Blob(buf.chunks);
+    addLog(`[RX] blob ready: ${formatSize(blob.size)}`);
     addIncomingFile(buf.name, blob);
     delete fileBuffers[p.fileId];
-    addLog("✅ Файл «" + buf.name + "» получен");
+}
+
+function sendAck(to, fileId) {
+    if (!ws || !to) return;
+    ws.send(JSON.stringify({
+        type: "file_ack",
+        payload: {to, fileId}
+    }));
 }
 
 function addIncomingFile(name, blob) {
@@ -142,9 +187,6 @@ function addIncomingFile(name, blob) {
     document.getElementById("incomingList").prepend(div);
 }
 
-// -------------------------
-// FILE SEND
-// -------------------------
 function onFileSelected(input) {
     const file = input.files[0];
     if (!file) return;
@@ -190,49 +232,53 @@ async function sendFile() {
     // --- file_start ---
     ws.send(JSON.stringify({
         type: "file_start",
-        payload: { to, fileId, name: file.name, size: total }
+        payload: {to, fileId, name: file.name, size: total}
     }));
 
     document.getElementById("progressWrap").style.display = "";
     document.getElementById("sendBtn").disabled = true;
     addLog("📤 Отправка «" + file.name + "» (" + formatSize(total) + ")");
 
-    // --- send chunks ---
+    ackWindowCount = 0;
+    ackWindowWaiters = [];
+    let chunkNum = 0;
+
     while (offset < total) {
         const slice = file.slice(offset, offset + CHUNK_SIZE);
-        const buffer = await slice.arrayBuffer();
+        const buf = await slice.arrayBuffer();
 
-        // encode to base64
-        const bytes = new Uint8Array(buffer);
-        let binary = "";
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        const b64 = btoa(binary);
+        const frame = new ArrayBuffer(HDR_SIZE + buf.byteLength);
+        const view = new Uint8Array(frame);
+        for (let i = 0; i < 36; i++) view[i] = to.charCodeAt(i);
+        for (let i = 0; i < 36; i++) view[36 + i] = fileId.charCodeAt(i);
+        view.set(new Uint8Array(buf), HDR_SIZE);
 
-        ws.send(JSON.stringify({
-            type: "file_chunk",
-            payload: { to, fileId, data: b64 }
-        }));
-
-        offset += buffer.byteLength;
-        setProgress(Math.min(100, Math.round(offset / total * 100)));
-
-        // yield to browser every 16 chunks (~4 MiB) to keep UI responsive
-        if ((offset / CHUNK_SIZE) % 16 === 0) {
-            await new Promise(r => setTimeout(r, 0));
+        if (ackWindowCount >= SEND_WINDOW) {
+            await new Promise(resolve => ackWindowWaiters.push(resolve));
         }
+        if (!isSending) break;
+
+        ackWindowCount++;
+        ws.send(frame);
+
+        offset += buf.byteLength;
+        chunkNum++;
+        setProgress(Math.min(100, Math.round(offset / total * 100)));
     }
 
-    // --- file_end ---
+    while (ackWindowCount > 0) {
+        await new Promise(resolve => ackWindowWaiters.push(resolve));
+    }
+
     ws.send(JSON.stringify({
         type: "file_end",
-        payload: { to, fileId }
+        payload: {to, fileId}
     }));
 
     addLog("✅ Отправлено: «" + file.name + "»");
     isSending = false;
     document.getElementById("sendBtn").disabled = false;
 
-    // reset after 2 sec
     setTimeout(clearFile, 2000);
 }
 
@@ -241,16 +287,19 @@ function setProgress(pct) {
     document.getElementById("progressText").textContent = pct + "%";
 }
 
-// -------------------------
-// DRAG AND DROP
-// -------------------------
 const dropZone = document.getElementById("dropZone");
 
 ["dragenter", "dragover"].forEach(ev =>
-    dropZone?.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add("drag-over"); })
+    dropZone?.addEventListener(ev, e => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+    })
 );
 ["dragleave", "drop"].forEach(ev =>
-    dropZone?.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove("drag-over"); })
+    dropZone?.addEventListener(ev, e => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+    })
 );
 dropZone?.addEventListener("drop", e => {
     const file = e.dataTransfer.files[0];
@@ -263,9 +312,6 @@ dropZone?.addEventListener("drop", e => {
     document.getElementById("selectedFile").style.display = "flex";
 });
 
-// -------------------------
-// UI: DEVICES
-// -------------------------
 function renderDevices() {
     const list = document.getElementById("devicesList");
     list.innerHTML = "";
@@ -302,9 +348,6 @@ function renderSelect() {
     if (prev) select.value = prev;
 }
 
-// -------------------------
-// CHAT
-// -------------------------
 function sendDirectMessageFromUI() {
     const toId = document.getElementById("recipient").value;
     const text = document.getElementById("message").value.trim();
@@ -312,16 +355,13 @@ function sendDirectMessageFromUI() {
 
     ws.send(JSON.stringify({
         type: "direct_message",
-        payload: { to: toId, text }
+        payload: {to: toId, text}
     }));
 
     addLog("➡️ " + text);
     document.getElementById("message").value = "";
 }
 
-// -------------------------
-// HELPERS
-// -------------------------
 function showError(msg) {
     const el = document.getElementById("wsError");
     if (!el) return;
@@ -343,14 +383,12 @@ function getClientId() {
     return id;
 }
 
-// crypto.randomUUID() requires HTTPS; this works over plain HTTP too
 function generateUUID() {
     if (typeof crypto !== "undefined" && crypto.getRandomValues) {
         return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
             (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
         );
     }
-    // last-resort fallback
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
         const r = Math.random() * 16 | 0;
         return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
@@ -384,8 +422,4 @@ function formatSize(bytes) {
 function escHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
-
-// -------------------------
-// CLEANUP
-// -------------------------
 window.addEventListener("beforeunload", () => ws?.close(1000, "Page unload"));

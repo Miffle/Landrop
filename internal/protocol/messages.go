@@ -28,6 +28,7 @@ type DevicesPayload struct {
 
 type FileStart struct {
 	To   string `json:"to"`
+	From string `json:"from"`
 	ID   string `json:"fileId"`
 	Name string `json:"name"`
 	Size int64  `json:"size"`
@@ -42,4 +43,9 @@ type FileChunk struct {
 type FileEnd struct {
 	To string `json:"to"`
 	ID string `json:"fileId"`
+}
+
+type FileAck struct {
+	To     string `json:"to"`
+	FileID string `json:"fileId"`
 }
