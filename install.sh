@@ -89,9 +89,17 @@ setup_systemd() {
         info "Skipped systemd setup."
         ;;
    *)
-      SERVICE_FILE="/etc/systemd/system/landrop.service"
-      info "Writing $SERVICE_FILE (requires sudo)..."
-      sudo tee "$SERVICE_FILE" >/dev/null <<EOF
+     SERVICE_NAME="landrop"
+     SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+
+     if systemctl list-unit-files | grep -q "^${SERVICE_NAME}.service"; then
+         info "Service ${SERVICE_NAME} exists. Restarting..."
+         sudo systemctl restart "${SERVICE_NAME}"
+         ok "Service restarted."
+     else
+         info "Service ${SERVICE_NAME} not found. Creating..."
+
+         sudo tee "$SERVICE_FILE" >/dev/null <<EOF
 [Unit]
 Description=Landrop file transfer server
 After=network.target
@@ -105,9 +113,10 @@ User=$(whoami)
 [Install]
 WantedBy=multi-user.target
 EOF
-      sudo systemctl daemon-reload
-      sudo systemctl enable --now landrop
-      ok "Service enabled and started."
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now "${SERVICE_NAME}"
+    ok "Service created, enabled and started."
+fi
       ;;
   esac
 }
