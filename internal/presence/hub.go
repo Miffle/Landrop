@@ -1,7 +1,7 @@
 package presence
 
 import (
-	"Test/internal/protocol"
+	"Landrop/internal/protocol"
 	"encoding/json"
 	"log"
 )

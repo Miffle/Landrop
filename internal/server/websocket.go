@@ -1,8 +1,8 @@
 package server
 
 import (
-	"Test/internal/presence"
-	"Test/internal/protocol"
+	"Landrop/internal/presence"
+	"Landrop/internal/protocol"
 	"encoding/json"
 	"fmt"
 	"log"
