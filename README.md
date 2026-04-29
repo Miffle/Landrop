@@ -73,3 +73,5 @@ web/
 
 - Нет авторизации — не запускайте в публичных сетях
 - Передача только между двумя конкретными клиентами за раз (one-to-one)
+
+[![Star History Chart](https://api.star-history.com/svg?repos=miffle/landrop&type=Date)](https://star-history.com/#miffle/landrop&Date)
