@@ -4,6 +4,8 @@ import (
 	webfiles "Landrop"
 	"Landrop/internal/presence"
 	"Landrop/internal/server"
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -12,20 +14,31 @@ import (
 var Version = "dev"
 
 func main() {
+	port := flag.Int("port", 6437, "Port to listen on")
+	basePath := flag.String("base-path", "", "URL prefix this app is mounted at (e.g. /m/landrop)")
+	flag.Parse()
+
+	addr := fmt.Sprintf(":%d", *port)
+
 	hub := presence.NewHub()
 	go hub.Run()
 
-	http.HandleFunc("/ws", server.HandleWS(hub))
+	mux := http.NewServeMux()
 
-	// Serve embedded static files
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(webfiles.Static()))))
+	mux.HandleFunc("/ws", server.HandleWS(hub))
 
-	// Serve embedded index.html
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(webfiles.Static()))))
+
+	// Index page
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(webfiles.IndexHTML())
 	})
 
-	log.Printf("Landrop %s — listening on :6437", Version)
-	log.Fatal(http.ListenAndServe(":6437", nil))
+	log.Printf("Landrop %s — listening on %s (base-path: %q)", Version, addr, *basePath)
+	log.Fatal(http.ListenAndServe(addr, mux))
 }
