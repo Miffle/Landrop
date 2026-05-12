@@ -18,7 +18,9 @@ function connectToWebsocket() {
     myId = getClientId();
 
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    const url = `${proto}://${location.host}/ws`;
+
+    const basePath = new URL(document.baseURI).pathname;
+    const url = `${proto}://${location.host}${basePath}ws`;
 
     hideError();
     addLog("🔄 Подключение к " + url);
@@ -33,7 +35,7 @@ function connectToWebsocket() {
 
         ws.send(JSON.stringify({
             type: "register",
-            payload: {id: myId, name}
+            payload: { id: myId, name }
         }));
 
         addLog("🟢 Подключено как «" + name + "»");
@@ -169,7 +171,7 @@ function sendAck(to, fileId) {
     if (!ws || !to) return;
     ws.send(JSON.stringify({
         type: "file_ack",
-        payload: {to, fileId}
+        payload: { to, fileId }
     }));
 }
 
@@ -235,7 +237,7 @@ async function sendFile() {
     // --- file_start ---
     ws.send(JSON.stringify({
         type: "file_start",
-        payload: {to, fileId, name: file.name, size: total}
+        payload: { to, fileId, name: file.name, size: total }
     }));
 
     document.getElementById("progressWrap").style.display = "";
@@ -275,7 +277,7 @@ async function sendFile() {
 
     ws.send(JSON.stringify({
         type: "file_end",
-        payload: {to, fileId}
+        payload: { to, fileId }
     }));
 
     addLog("✅ Отправлено: «" + file.name + "»");
@@ -358,7 +360,7 @@ function sendDirectMessageFromUI() {
 
     ws.send(JSON.stringify({
         type: "direct_message",
-        payload: {to: toId, text}
+        payload: { to: toId, text }
     }));
 
     addLog("➡️ " + text);
